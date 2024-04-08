@@ -21,10 +21,8 @@ public class Main implements ActionListener, ListSelectionListener {
     private JList<File> list;
     private JButton playB;
     private JButton pauseB;
-    private JButton stopB;
-    private JButton nextB;
-    private JButton prevB;
     private JButton browseB;
+    private JCheckBox isInLoop;
     private JLabel songTitleLabel;
 
     private JFileChooser fileChooser;
@@ -92,12 +90,17 @@ public class Main implements ActionListener, ListSelectionListener {
         browseB.setBounds(100, 150, 130,30);
         browseB.addActionListener(this);
 
+        isInLoop = new JCheckBox("Loop");
+        isInLoop.setBounds(400, 650, 130, 30);
+        isInLoop.addActionListener(this);
+
         songTitleLabel = new JLabel("Song selected: ");
         songTitleLabel.setBounds(200, 700, 600, 30);
 
         frame.add(playB);
         frame.add(pauseB);
         frame.add(browseB);
+        frame.add(isInLoop);
         frame.add(songTitleLabel);
         frame.add(list);
         frame.setLayout(null);
@@ -128,7 +131,11 @@ public class Main implements ActionListener, ListSelectionListener {
         if (e.getSource() == pauseB) {
             clip.stop();
         }
-
+        if (e.getSource() == isInLoop){
+            if (isInLoop.isSelected())
+                clip.loop(Clip.LOOP_CONTINUOUSLY);
+            else clip.loop(0);
+        }
     }
 
     private void UpdateList(){
