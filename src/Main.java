@@ -146,7 +146,7 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
         songStatusLabel = new JLabel("Status: " + songStatus);
         songStatusLabel.setBounds(300, 120, 130, 30);
 
-        appIcon = new ImageIcon("Assets/pngegg.png");
+        appIcon = new ImageIcon("icon.png");
 
         menuBar = new JMenuBar();
 
