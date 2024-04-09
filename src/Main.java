@@ -6,8 +6,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 
 
 public class Main implements ActionListener, ListSelectionListener, LineListener, ChangeListener {
@@ -24,6 +23,15 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
     private static JLabel songStatusLabel;
     private static JSlider frameSlider;
 
+    private JMenuBar menuBar;
+    private JMenu fileMenu;
+    private JMenu helpMenu;
+    private JMenuItem closeItem;
+    private JMenuItem aboutItem;
+    private JMenuItem supportedFormatsItem;
+
+    private ImageIcon appIcon;
+
     private JFileChooser fileChooser;
 
     java.io.FileFilter fileFilter;
@@ -37,9 +45,15 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
 
     private static SongStatusE songStatus = SongStatusE.STOPPED;
 
+    File fileConfig;
+    FileReader fileConfigDir;
+    private BufferedReader reader;
+    private BufferedWriter writer;
+
     Main() throws UnsupportedAudioFileException, IOException, LineUnavailableException {
         frame = new JFrame("Audio Player | Lemoncho");
         frame.setSize(800,820);
+        frame.setLocationRelativeTo(null);
 
         fileFilter = new java.io.FileFilter() {
             @Override
@@ -52,65 +66,105 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
         fileChooser = new JFileChooser();
         fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
-        folderPath = new File("C:\\Users\\Public\\Music");
-        files = folderPath.listFiles(fileFilter);
+        try {
+            fileConfig = new File("configFileChooser.data");
+            fileConfigDir = new FileReader(fileConfig);
+            reader = new BufferedReader(fileConfigDir);
 
-        File randFile = new File("E:\\sound\\discord_ringtone_but_its_a_loop.wav");
+            File file = new File(String.valueOf(reader.readLine()));
+
+            fileChooser.setCurrentDirectory(file);
+            folderPath = new File(file.getAbsolutePath());
+            files = folderPath.listFiles(fileFilter);
+        }catch (Exception ex){
+            System.out.println("Error when trying to load config");
+            ex.printStackTrace();
+        }
+
 
         listModel = new DefaultListModel<File>();
-        for (File file : files){
-            listModel.addElement(file);
+        try {
+            for (File file : files) {
+                listModel.addElement(file);
+            }
+        }catch (Exception ex){
+            ex.printStackTrace();
         }
-        listModel.addElement(randFile); // TESTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! REMOVE PLS!!!!!!!!!!!!!!!
+
+
+        //listModel.addElement(); // TESTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! REMOVE PLS!!!!!!!!!!!!!!!
 
         try {
             audioInputStream = AudioSystem.getAudioInputStream(listModel.getElementAt(0));
-            System.out.println(randFile.getAbsolutePath());
         }catch (Exception e) {
-            System.out.println("IMA PROBLEM!!!!!");
-            System.out.println(randFile.getAbsolutePath());
+            System.out.println("PROBLEM!!!!!");
+            e.printStackTrace();
         }
         clip = AudioSystem.getClip();
-        clip.open(audioInputStream);
+        try {
+            clip.open(audioInputStream);
+        }catch (Exception ex) {
+            ex.printStackTrace();}
         clip.addLineListener(this);
 
+
         list = new JList<File>();
-        list.setBounds(100,200,600,400);
+        list.setBounds(100,170,600,400);
         list.setModel(listModel);
         list.addListSelectionListener(this);
 
         playB = new JButton("Play");
-        playB.setBounds(100,670, 130,30);
+        playB.setBounds(100,640, 130,30);
         playB.addActionListener(this);
 
         pauseB = new JButton("Pause");
-        pauseB.setBounds(250,670, 130,30);
+        pauseB.setBounds(250,640, 130,30);
         pauseB.addActionListener(this);
 
         stopB = new JButton("Stop");
-        stopB.setBounds(400,670, 130,30);
+        stopB.setBounds(400,640, 130,30);
         stopB.addActionListener(this);
 
         browseB = new JButton("Browse");
-        browseB.setBounds(100, 150, 130,30);
+        browseB.setBounds(100, 120, 130,30);
         browseB.addActionListener(this);
 
         isInLoop = new JCheckBox("Loop");
-        isInLoop.setBounds(550, 670, 130, 30);
+        isInLoop.setBounds(550, 640, 130, 30);
         isInLoop.addActionListener(this);
 
         frameSlider = new JSlider(JSlider.HORIZONTAL, 0, clip.getFrameLength(), 0);
-        frameSlider.setBounds(350, 630, 130,30);
+        frameSlider.setBounds(350, 600, 130,30);
         frameSlider.setMajorTickSpacing(10);
         frameSlider.setMinorTickSpacing(1);
 
         frameSlider.addChangeListener(this);
 
         songTitleLabel = new JLabel("Song selected: ");
-        songTitleLabel.setBounds(200, 720, 600, 30);
+        songTitleLabel.setBounds(200, 690, 600, 30);
 
         songStatusLabel = new JLabel("Status: " + songStatus);
-        songStatusLabel.setBounds(300, 150, 130, 30);
+        songStatusLabel.setBounds(300, 120, 130, 30);
+
+        appIcon = new ImageIcon("Assets/pngegg.png");
+
+        menuBar = new JMenuBar();
+
+        fileMenu = new JMenu("File");
+        helpMenu = new JMenu("Help");
+
+        closeItem = new JMenuItem("Exit");
+        closeItem.addActionListener(this);
+        aboutItem = new JMenuItem("About");
+        aboutItem.addActionListener(this);
+        supportedFormatsItem = new JMenuItem("Supported formats");
+        supportedFormatsItem.addActionListener(this);
+
+        menuBar.add(fileMenu);
+        menuBar.add(helpMenu);
+        fileMenu.add(closeItem);
+        helpMenu.add(aboutItem);
+        helpMenu.add(supportedFormatsItem);
 
         frame.add(playB);
         frame.add(pauseB);
@@ -121,6 +175,8 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
         frame.add(songTitleLabel);
         frame.add(songStatusLabel);
         frame.add(list);
+        frame.setJMenuBar(menuBar);
+        frame.setIconImage(appIcon.getImage());
         frame.setLayout(null);
         frame.setVisible(true);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -144,14 +200,11 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == browseB) { //Handler for browse button
-            list.clearSelection(); // Clears the selected item(It DOESNT delete it! It just unselects it) because it throws errors
-            int v = fileChooser.showOpenDialog(null); // fileChooser option
-            if (v == JFileChooser.APPROVE_OPTION) {
-                folderPath = fileChooser.getSelectedFile();
-                path = folderPath.getAbsolutePath(); // Dont ask me why I putted this if you want you can remove it. Wont break anything I promise
-                files = folderPath.listFiles(fileFilter);
+            try {
+                Browse();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
             }
-            UpdateList();
         }
 
         if (e.getSource() == playB) { // Handler for play Button
@@ -169,6 +222,16 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
             else clip.loop(0); // Checks again but if its not selected it disables it
             UpdateSongStatusLabel();
         }
+
+        if (e.getSource() == closeItem){
+            System.exit(0);
+        }
+        if (e.getSource() == aboutItem){
+            JOptionPane.showMessageDialog(null, "This is a music player made with ❤️ by Lemoncho");
+        }
+        if (e.getSource() == supportedFormatsItem){
+            JOptionPane.showMessageDialog(null, "Currently the supported formats are: .wav");
+        }
     }
 
     private void UpdateList(){
@@ -181,6 +244,19 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
             listModel.addElement(file);
         }
 
+    }
+
+
+    private void Browse() throws IOException {
+        list.clearSelection(); // Clears the selected item(It DOESNT delete it! It just unselects it) because it throws errors
+        int v = fileChooser.showOpenDialog(null); // fileChooser option
+        if (v == JFileChooser.APPROVE_OPTION) {
+            folderPath = fileChooser.getSelectedFile();
+            path = folderPath.getAbsolutePath(); // Dont ask me why I putted this if you want you can remove it. Wont break anything I promise
+            files = folderPath.listFiles(fileFilter);
+            SaveDirectoryLocation();
+        }
+        UpdateList();
     }
 
     private void UpdateSongStatusLabel(){
@@ -208,6 +284,12 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
         UpdateSongStatusLabel();
     }
 
+    private void SaveDirectoryLocation() throws IOException {
+        writer = new BufferedWriter(new FileWriter(fileConfig));
+        writer.write(fileChooser.getSelectedFile().getAbsolutePath());
+        writer.flush();
+    }
+
     @Override
     public void valueChanged(ListSelectionEvent e) {
         if (e.getSource() == list){
@@ -232,7 +314,7 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
 
     @Override
     public void update(LineEvent event) {
-        LineEvent.Type type = event.getType();
+
     }
 
     @Override
