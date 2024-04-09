@@ -1,20 +1,14 @@
-import javax.print.DocFlavor;
 import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.filechooser.FileFilter;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.Path;
-import java.util.Arrays;
+
 
 public class Main implements ActionListener, ListSelectionListener, LineListener, ChangeListener {
 
@@ -23,9 +17,11 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
     private JList<File> list;
     private JButton playB;
     private JButton pauseB;
+    private JButton stopB;
     private JButton browseB;
     private JCheckBox isInLoop;
     private JLabel songTitleLabel;
+    private static JLabel songStatusLabel;
     private static JSlider frameSlider;
 
     private JFileChooser fileChooser;
@@ -38,6 +34,8 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
 
     AudioInputStream audioInputStream;
     static Clip clip;
+
+    private static SongStatusE songStatus = SongStatusE.STOPPED;
 
     Main() throws UnsupportedAudioFileException, IOException, LineUnavailableException {
         frame = new JFrame("Audio Player | Lemoncho");
@@ -89,12 +87,16 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
         pauseB.setBounds(250,670, 130,30);
         pauseB.addActionListener(this);
 
+        stopB = new JButton("Stop");
+        stopB.setBounds(400,670, 130,30);
+        stopB.addActionListener(this);
+
         browseB = new JButton("Browse");
         browseB.setBounds(100, 150, 130,30);
         browseB.addActionListener(this);
 
         isInLoop = new JCheckBox("Loop");
-        isInLoop.setBounds(400, 670, 130, 30);
+        isInLoop.setBounds(550, 670, 130, 30);
         isInLoop.addActionListener(this);
 
         frameSlider = new JSlider(JSlider.HORIZONTAL, 0, clip.getFrameLength(), 0);
@@ -107,12 +109,17 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
         songTitleLabel = new JLabel("Song selected: ");
         songTitleLabel.setBounds(200, 720, 600, 30);
 
+        songStatusLabel = new JLabel("Status: " + songStatus);
+        songStatusLabel.setBounds(300, 150, 130, 30);
+
         frame.add(playB);
         frame.add(pauseB);
+        frame.add(stopB);
         frame.add(browseB);
         frame.add(frameSlider);
         frame.add(isInLoop);
         frame.add(songTitleLabel);
+        frame.add(songStatusLabel);
         frame.add(list);
         frame.setLayout(null);
         frame.setVisible(true);
@@ -127,7 +134,7 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
             frameSlider.setValue(clip.getFramePosition());
 
             try {
-                Thread.sleep(30); // Adjust as needed
+                Thread.sleep(40); // Adjust as needed
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -148,18 +155,19 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
         }
 
         if (e.getSource() == playB) { // Handler for play Button
-            clip.start(); // Start
-            if (clip.getFramePosition() == clip.getFrameLength()){
-                clip.setFramePosition(0);
-                clip.start();
-            }
+            Play();
         }
         if (e.getSource() == pauseB) { // Handler for pause Button
-            clip.stop(); // Pause
+            Pause();
         }
+        if (e.getSource() == stopB) {
+            Stop();
+        }
+
         if (e.getSource() == isInLoop){ // Handler for loop check box
             if (isInLoop.isSelected()) clip.loop(Clip.LOOP_CONTINUOUSLY); // Checks if the check box is selected and if it is it sets the looping to true
             else clip.loop(0); // Checks again but if its not selected it disables it
+            UpdateSongStatusLabel();
         }
     }
 
@@ -175,15 +183,42 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
 
     }
 
+    private void UpdateSongStatusLabel(){
+        songStatusLabel.setText("Status: " + songStatus);
+    }
+
+    private void Play(){
+        clip.start(); // Start
+        songStatus = SongStatusE.PLAYING;
+        if (clip.getFramePosition() == clip.getFrameLength()){
+            clip.setFramePosition(0);
+            clip.start();
+        }
+        UpdateSongStatusLabel();
+    }
+    private void Pause(){
+        clip.stop(); // Pause
+        songStatus = !(clip.getFramePosition() == 0) ? SongStatusE.PAUSED : SongStatusE.STOPPED;
+        UpdateSongStatusLabel();
+    }
+    private void Stop(){
+        songStatus = SongStatusE.STOPPED;
+        clip.stop();
+        clip.setFramePosition(0);
+        UpdateSongStatusLabel();
+    }
+
     @Override
     public void valueChanged(ListSelectionEvent e) {
         if (e.getSource() == list){
             try {
                 if (!list.isSelectionEmpty()) {
                     File file = list.getSelectedValue().getAbsoluteFile();
+                    clip.stop();
                     audioInputStream = AudioSystem.getAudioInputStream(file);
                     clip = AudioSystem.getClip();
                     clip.open(audioInputStream);
+                    //clip.addLineListener(this);
                     frameSlider.setMaximum(clip.getFrameLength());
 
                     songTitleLabel.setText("Song selected: " + file.getName());
@@ -197,7 +232,7 @@ public class Main implements ActionListener, ListSelectionListener, LineListener
 
     @Override
     public void update(LineEvent event) {
-        //clip.setFramePosition(frameSlider.getValue());
+        LineEvent.Type type = event.getType();
     }
 
     @Override
